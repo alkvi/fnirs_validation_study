@@ -8,6 +8,15 @@ The data repository for this study can be found in: https://doi.org/10.48723/vsc
 
 Analysis is performed on the data found in the data repository.
 
+These scripts assume the following directory structure:
+
+fnirs_validation_study  
+│--   Protocol_1_analysis.m  
+│--   ...  
+Data  
+│--   (fNIRS data etc)  
+│--   temp_data  
+
 ### Demographics and gait variables
 
 Important demographics are created using _summarize_demographics.py_.
