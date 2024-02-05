@@ -2,7 +2,7 @@
 
 This repository contains files for producing the results found in: (to be added)
 
-The data repository for this study can be found in: https://doi.org/10.48723/vscr-eq07. Details on how this dataset was prepared can be found in: (to be added).
+The data repository for this study can be found in: https://doi.org/10.48723/vscr-eq07. Details on how this dataset was prepared can be found in: https://github.com/alkvi/fnirs_dataset_preparation.
 
 ## Data analysis
 
