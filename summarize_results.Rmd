@@ -1,0 +1,364 @@
+---
+title: "summarize_results"
+output:
+  html_document:
+    code_folding: hide
+  pdf_document: default
+  word_document: default
+date: "2023-10-25"
+---
+
+```{r,results='asis', include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width=16, fig.height=8) 
+
+library(ztable)
+library(magrittr)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(stringr)
+library(plyr, include.only = c("revalue"))
+library(sjPlot)
+
+options(ztable.type="html")
+
+```
+
+## Introduction
+
+This R markdown file will attempt to summarize the results of the fNIRS validation study.
+
+The analysis follows the preregistration at [OSF](https://osf.io/uqy6d/?view_only=fa44dbf4f5a8461499cdb88f6c8484b4).
+
+Data is from 3 groups, younger adults (YA), older adults (OA) and people with Parkinson's disease (PD). 
+
+Collected for each group: 42/49/42 YA/OA/PD. For detailed demographics, see 
+`GRP_fNIRS @ uMOVE project - fNIRS - fNIRS\PROJEKT\Validation fNIRS\Planning\Data collection status 2023-02-24-FINAL.pdf`
+
+For this study we are using the following data:
+
+- fNIRS data
+- gait data (obtained via IMUs) 
+- clinical data (Mini-BESTest for balance, MDS-UPDRS3 motor score)
+- some questionnaire data (HADS for anxiety, Walk12 for self-reported walking ability).
+
+This validation study only focuses on walking protocol 1.
+
+The tasks in protocol 1 were:
+
+- Standing still and doing auditory Stroop (ST_stand)
+- Straight walking (ST_walk)
+- Straight walking with auditory Stroop (DT_walk)
+- .. and a rest condition in-beween these where subject is standing still, for a baseline
+
+In this dataset, fNIRS data is recorded at 10.1 Hz with a montage consisting of 8 sources and 8 detectors, covering the prefrontal cortex (PFC). An additional 8 short-channel detectors are used (to filter out shallow signals from scalp), one for each source. 
+
+### What were our hypotheses for this study?
+
+These were based on our reading of the literature (when we wrote the pre-registration in 2022) on brain activity during overground gait, and the expectation that "non-automatic" gait would result in higher prefrontal activity.
+
+**Note about language**
+
+Given my inexperience with mixed models at the time, the language here isn't very precise. I should probably have written something like "moderate to large fixed effect" instead of "correlation", since we did specify we would use mixed models, but we don't get correlation values as such from them.
+
+**Hypotheses regarding known group validity:**
+
+- H1. There is an increase in dlPFC activity during straight walking compared to rest (standing still) for OA and PD.
+- H2. The increase in dlPFC activity during straight walking compared to rest is larger in Hoehn & Yahr (HY) stage 3 & 4 compared to 1 & 2 for PD.
+- H3. There is an increase in dlPFC activity during dual-task (DT) walking (with auditory Stroop) compared to single-task (ST) walking for YA, OA and PD.
+- H4 The increase in H3 is larger in OA and PD compared to YA.
+
+**Hypotheses regarding convergent validity:**
+
+- H5. Amount of increase in dlPFC activity during normal walking is moderately to highly correlated with lower balance ability (lower Mini-BESTest score) in OA and PD.
+- H6. Amount of increase in dlPFC activity during normal walking is moderately to highly correlated with a higher (more severe) motor score from MDS-UPDRS part 3 for PD.
+- H7. Amount of increase in dlPFC activity during normal walking is slightly to moderately correlated with a lower self- perceived walking ability (higher Walk-12 score) in OA and PD.
+- H8. Amount of increase in dlPFC activity during normal walking is moderately correlated with a higher step time variability in OA and PD.
+- H9. Amount of increase in dlPFC activity during normal walking is moderately correlated with a lower walking speed in OA and PD.
+- H10. Amount of increase in dlPFC activity during DT walking is moderately to highly correlated with a higher DT cost on walking speed in all groups.
+
+**Hypotheses regarding discriminant validity:**
+
+- H11. dlPFC activity has no or low correlation with anxiety (HADS score) in YA.
+
+**Hypotheses regarding measure type:**
+
+- H12. dlPFC activity is best reflected by a correlation-based signal improvement (CBSI) combined measure of HbO2 and HHb.
+
+### Summary of analysis
+
+These steps were taken to process the fNIRS data and get a single test statistic for each hypothesis.
+
+- Convert raw signal into optical density and hemoglobin measures (oxygenated and deoxygenated hemoglobin, HbO and HHb), using [modified Lambert–Beer law](https://doi.org/10.1117/1.jbo.18.10.105004) with differential pathlength factor (DPF) dependent on age.
+- Additionally calculate [correlation-based signal improvement](https://doi.org/10.1016%2Fj.neuroimage.2009.11.050) signal (CBSI), total hemoglobin (HbT) and hemoglobin difference (HbD).
+- Run 1st (subject) level analysis using GLM [(AR-IRLS)](https://doi.org/10.3390/a11050073) on each hemoglobin type. This gives us subject-level changes (increases/decreases) from rest, for each hemoglobin type, during the 3 different conditions.
+- Run 2nd level (group) level analysis using a mixed-effect model, for each group. This gives us a group-level change in hemoglobin measure during each different condition, along with interaction effects.
+- Perform region of interest (ROI) averaging over the dorsolateral prefrontal cortex (dlPFC). This gives us a single T-statistic (along with an FDR-corrected p value) according to Eq.37c in the [toolbox paper](https://doi.org/10.3390/a11050073) for each effect of interest.
+
+For studying condition effects, the mixed model used was:
+
+$$
+\beta \sim -1 + condition + ( 1 | Subject )
+$$
+For studying effects of covariates on brain activity during different conditions, the mixed models used were, for each covariate:
+
+$$
+\beta \sim -1 + condition + condition:covariate + ( 1 | Subject )
+$$
+For example, the model using the covariate *DT_cost* (i.e. dual-task cost on walking speed) would give us the interaction effect of *DT_cost* with the brain activity during each condition. So for hypothesis H10 we take the interaction *DT_walk:DT_cost* as the effect of interest.
+
+### Diagnostics
+
+Modelling one covariate at a time had a lower AIC/BIC than modelling all at once (indicating better model fit), plus it avoids possible colinearity of covariates (seems very likely with e.g. gait parameters).
+
+Model [assumptions](https://r.qcbs.ca/workshop07/book-en/step-3.-model-validation.html) were checked with: 
+
+- Histogram of residuals
+- Q-Q plot of residuals
+- Fitted vs residual plot
+- Leverage vs residual plot
+- Residual vs covariate plot
+
+These are saved in 
+`GRP_fNIRS @ uMOVE project - fNIRS - fNIRS\PROJEKT\Validation fNIRS\Figures\model_assumptions`
+
+As far as I can tell, the results indicate that the residuals are approximately normal, perhaps slightly [fat-tailed](https://seankross.com/2016/02/29/A-Q-Q-Plot-Dissection-Kit.html), which means that results could be slightly [anti-conservative](https://bbolker.github.io/morelia_2018/notes/mixedlab.html).
+
+The [linearity assumption](https://ademos.people.uic.edu/Chapter18.html) also looks OK -- I cannot see a systematic pattern in the residual vs covariate plots.
+
+## Load the ROI results from file
+
+Here we load the processed ROI results. Values for the CBSI measurement type are displayed.
+Then we prepare to visualize the data.
+
+```{r,results='asis', class.source = 'fold-hide', echo=FALSE}
+
+# Load
+csv_path <- "../Data/temp_data/hypothesis_table_cbsi.csv"
+hypothesis_data_cbsi <- read.csv(csv_path)
+
+# Add hypotheses numbers
+hypothesis_data <- hypothesis_data_cbsi
+hypothesis_data$hypothesis <- c("H1", "H1", "H2", "H3", "H3", "H3", "H5", "H5", "H6", "H7", "H7", "H8", "H8", "H9", "H9", "H10", "H10", "H10", "H11")
+
+# Change group name
+hypothesis_data$group <- paste("cbsi_", hypothesis_data$group, sep="")
+
+# Here also read HbO, HHb, other data.
+# HbO
+csv_path <- "../Data/temp_data/hypothesis_table_hbo.csv"
+hypothesis_data_hbo <- read.csv(csv_path)
+hypothesis_data_hbo$group <- paste("hbo_", hypothesis_data_hbo$group, sep="")
+hypothesis_data_hbo$hypothesis <- c("H1", "H1", "H2", "H3", "H3", "H3", "H5", "H5", "H6", "H7", "H7", "H8", "H8", "H9", "H9", "H10", "H10", "H10", "H11")
+hypothesis_data <- rbind(hypothesis_data_hbo, hypothesis_data)
+
+# HbR
+csv_path <- "../Data/temp_data/hypothesis_table_hbr.csv"
+hypothesis_data_hbr <- read.csv(csv_path)
+hypothesis_data_hbr$group <- paste("hbr_", hypothesis_data_hbr$group, sep="")
+hypothesis_data_hbr$hypothesis <- c("H1", "H1", "H2", "H3", "H3", "H3", "H5", "H5", "H6", "H7", "H7", "H8", "H8", "H9", "H9", "H10", "H10", "H10", "H11")
+
+# Flip the T values for HbR since it should decrease where we expect others to increase
+hypothesis_data_hbr$T <- -hypothesis_data_hbr$T
+hypothesis_data <- rbind(hypothesis_data_hbr, hypothesis_data)
+
+# HbT
+csv_path <- "../Data/temp_data/hypothesis_table_hbt.csv"
+hypothesis_data_hbt <- read.csv(csv_path)
+hypothesis_data_hbt$group <- paste("hbt_", hypothesis_data_hbt$group, sep="")
+hypothesis_data_hbt$hypothesis <- c("H1", "H1", "H2", "H3", "H3", "H3", "H5", "H5", "H6", "H7", "H7", "H8", "H8", "H9", "H9", "H10", "H10", "H10", "H11")
+hypothesis_data <- rbind(hypothesis_data_hbt, hypothesis_data)
+
+# HbD
+csv_path <- "../Data/temp_data/hypothesis_table_hbd.csv"
+hypothesis_data_hbd <- read.csv(csv_path)
+hypothesis_data_hbd$group <- paste("hbd_", hypothesis_data_hbd$group, sep="")
+hypothesis_data_hbd$hypothesis <- c("H1", "H1", "H2", "H3", "H3", "H3", "H5", "H5", "H6", "H7", "H7", "H8", "H8", "H9", "H9", "H10", "H10", "H10", "H11")
+hypothesis_data <- rbind(hypothesis_data_hbd, hypothesis_data)
+
+# Get data ranges
+t_vals = na.omit(hypothesis_data$T)
+max_val <- max(t_vals)
+min_val <- min(t_vals)
+
+# Add expected values to color blocks later
+hypothesis_data[nrow(hypothesis_data) + 1,] <- c(NaN, NaN, NaN, NaN, NaN, NaN, max_val, NaN, NaN, NaN, NaN, NaN, "EX", "H1")
+hypothesis_data[nrow(hypothesis_data) + 1,] <- c(NaN, NaN, NaN, NaN, NaN, NaN, max_val, NaN, NaN, NaN, NaN, NaN, "EX", "H2")
+hypothesis_data[nrow(hypothesis_data) + 1,] <- c(NaN, NaN, NaN, NaN, NaN, NaN, max_val, NaN, NaN, NaN, NaN, NaN, "EX", "H3")
+hypothesis_data[nrow(hypothesis_data) + 1,] <- c(NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, "EX", "H4")
+hypothesis_data[nrow(hypothesis_data) + 1,] <- c(NaN, NaN, NaN, NaN, NaN, NaN, min_val, NaN, NaN, NaN, NaN, NaN, "EX", "H5")
+hypothesis_data[nrow(hypothesis_data) + 1,] <- c(NaN, NaN, NaN, NaN, NaN, NaN, max_val, NaN, NaN, NaN, NaN, NaN, "EX", "H6")
+hypothesis_data[nrow(hypothesis_data) + 1,] <- c(NaN, NaN, NaN, NaN, NaN, NaN, max_val, NaN, NaN, NaN, NaN, NaN, "EX", "H7")
+hypothesis_data[nrow(hypothesis_data) + 1,] <- c(NaN, NaN, NaN, NaN, NaN, NaN, max_val, NaN, NaN, NaN, NaN, NaN, "EX", "H8")
+hypothesis_data[nrow(hypothesis_data) + 1,] <- c(NaN, NaN, NaN, NaN, NaN, NaN, min_val, NaN, NaN, NaN, NaN, NaN, "EX", "H9")
+hypothesis_data[nrow(hypothesis_data) + 1,] <- c(NaN, NaN, NaN, NaN, NaN, NaN, max_val, NaN, NaN, NaN, NaN, NaN, "EX", "H10")
+hypothesis_data[nrow(hypothesis_data) + 1,] <- c(NaN, NaN, NaN, NaN, NaN, NaN, 0, NaN, NaN, NaN, NaN, NaN, "EX", "H11")
+
+# Code as numeric, factor
+hypothesis_data$p <- as.numeric(hypothesis_data$p)
+hypothesis_data$q <- as.numeric(hypothesis_data$q)
+hypothesis_data$T <- as.numeric(hypothesis_data$T)
+hypothesis_data$hypothesis <- as.factor(hypothesis_data$hypothesis)
+hypothesis_data$hypothesis <- factor(hypothesis_data$hypothesis, levels=c('H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7', 'H8', 'H9', 'H10', 'H11'))
+hypothesis_data$group <- as.factor(hypothesis_data$group)
+hypothesis_data$group <- factor(hypothesis_data$group, levels=c('EX', 
+                                                                'cbsi_YA', 'cbsi_OA', 'cbsi_PD',
+                                                                'hbo_YA', 'hbo_OA', 'hbo_PD',
+                                                                'hbr_YA', 'hbr_OA', 'hbr_PD',
+                                                                'hbt_YA', 'hbt_OA', 'hbt_PD',
+                                                                'hbd_YA', 'hbd_OA', 'hbd_PD'))
+
+# Order by hypothesis and group
+hypothesis_data <- hypothesis_data[order(hypothesis_data$hypothesis, hypothesis_data$group),]
+
+# Which ones are significant?
+hypothesis_data <- hypothesis_data %>%
+  mutate(significant = !is.na(q) & q < 0.05)
+
+# Display CBSI data
+hypothesis_data_cbsi <- subset(hypothesis_data_cbsi, select = c(group, type, ROI, Contrast, Beta, SE, T, p, q))
+ztable(hypothesis_data_cbsi)
+
+
+```
+
+
+```{r,results='asis', echo=FALSE}
+
+# Arrange data into separate groups and add some visualization things.
+
+# Re-order hypothesis so top is H1
+hypothesis_data$hypothesis <- factor(hypothesis_data$hypothesis, levels=rev(c('H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7', 'H8', 'H9', 'H10', 'H11')))
+
+# Rename the hypotheses to full names
+hypothesis_data$hypothesis <- revalue(hypothesis_data$hypothesis, c("H1"="H1 ST_walk", 
+                           "H2"="H2 HY stage",
+                           "H3"="H3 DT-ST",
+                           "H4"="H4 DT-ST comp",
+                           "H5"="H5 Balance",
+                           "H6"="H6 UPDRS3",
+                           "H7"="H7 Walk12",
+                           "H8"="H8 Step time var",
+                           "H9"="H9 Walk speed",
+                           "H10"="H10 DT cost",
+                           "H11"="H11 Anxiety"))
+
+# For visualization, add a label for the T value only for real data, not expected column
+hypothesis_data <- hypothesis_data %>%
+  mutate(T_label = sprintf("%0.2f", round(T, digits = 2)))
+hypothesis_data[hypothesis_data$group %in% c('EX'),]$T_label <- ""
+
+# Which hypotheses are non-null for each group? Select only these rows
+ya_data <- hypothesis_data[str_detect(hypothesis_data$group, 'YA'),]
+hypos <- ya_data[complete.cases(ya_data$T),]$hypothesis
+ya_data <- hypothesis_data[hypothesis_data$hypothesis %in% hypos & 
+                             (str_detect(hypothesis_data$group, 'YA') |
+                              str_detect(hypothesis_data$group, 'EX')),]
+
+oa_data <- hypothesis_data[str_detect(hypothesis_data$group, 'OA'),]
+hypos <- oa_data[complete.cases(oa_data$T),]$hypothesis
+oa_data <- hypothesis_data[hypothesis_data$hypothesis %in% hypos & 
+                             (str_detect(hypothesis_data$group, 'OA') |
+                              str_detect(hypothesis_data$group, 'EX')),]
+
+pd_data <- hypothesis_data[str_detect(hypothesis_data$group, 'PD'),]
+hypos <- pd_data[complete.cases(pd_data$T),]$hypothesis
+pd_data <- hypothesis_data[hypothesis_data$hypothesis %in% hypos & 
+                             (str_detect(hypothesis_data$group, 'PD') |
+                              str_detect(hypothesis_data$group, 'EX')),]
+
+# Separate out also the main measurement, CBSI
+ya_data_cbsi = ya_data[ya_data$group %in% c("EX", "cbsi_YA"),]
+oa_data_cbsi = oa_data[oa_data$group %in% c("EX", "cbsi_OA"),]
+pd_data_cbsi = pd_data[pd_data$group %in% c("EX", "cbsi_PD"),]
+
+
+```
+
+## Visualize the data - Main measurement type, CBSI
+
+
+Green color means an effect (or interaction effect) in a positive direction. For conditions and covariates, this means:
+
+- For a condition, the brain activity (in the dlPFC) is higher during the condition than rest.
+- For a covariate, a *higher* value of the covariate is associated with a *higher* brain activity.
+
+The opposite relationship is true for red color:
+
+- For a condition, the brain activity (in the dlPFC) is lower during the condition than rest.
+- For a covariate, a *lower* value of the covariate is associated with a *higher* brain activity.
+
+Leftmost column (EX) is the expected direction according to the hypothesis. Significant values are indicated in bold.
+Y axis is hypothesis number, X axis is the measurement column (YA left, OA middle, PD right).
+
+
+```{r,results='asis', echo=FALSE}
+
+p1 <- ggplot(ya_data_cbsi, aes(x=group, y=hypothesis, fill=T)) + 
+  geom_tile(color = "black", lwd = 1.5, linetype = 1) +
+  geom_text(aes(label = T_label, fontface = ifelse(significant, "bold", "plain")), color = "black", size = 4) +
+  scale_fill_gradient2(midpoint = 0, low = "red", mid = "white", high = "green") +
+  theme(text = element_text(size=20), axis.text.x=element_text(angle=90)) +
+  xlab(NULL)
+
+p2 <- ggplot(oa_data_cbsi, aes(x=group, y=hypothesis, fill=T)) + 
+  geom_tile(color = "black", lwd = 1.5, linetype = 1) +
+  geom_text(aes(label = T_label, fontface = ifelse(significant, "bold", "plain")), color = "black", size = 4) +
+  scale_fill_gradient2(midpoint = 0, low = "red", mid = "white", high = "green") +
+  theme(text = element_text(size=20), axis.text.x=element_text(angle=90)) +
+  ylab(NULL) + 
+  xlab(NULL)
+
+p3 <- ggplot(pd_data_cbsi, aes(x=group, y=hypothesis, fill=T)) + 
+  geom_tile(color = "black", lwd = 1.5, linetype = 1) +
+  geom_text(aes(label = T_label, fontface = ifelse(significant, "bold", "plain")), color = "black", size = 4) +
+  scale_fill_gradient2(midpoint = 0, low = "red", mid = "white", high = "green") +
+  theme(text = element_text(size=20), axis.text.x=element_text(angle=90)) +
+  ylab(NULL) + 
+  xlab(NULL)
+
+p1 + p2 + p3
+
+p_all <- p1 + p2 + p3
+save_plot("ggplot_hypotheses_cbsi.svg", fig = p_all, width=35, height=16)
+
+```
+
+
+## Visualize the data - Exploratory with all measurement types
+
+For more of an exploratory analysis, this is the same plot as above but with each measurement type on the X axis (CBSI, HbO, HHb, HbT, HbD). YA left, OA middle, PD right.
+
+```{r,results='asis', echo=FALSE}
+
+p4 <- ggplot(ya_data, aes(x=group, y=hypothesis, fill=T)) + 
+  geom_tile(color = "black", lwd = 1.5, linetype = 1) +
+  geom_text(aes(label = T_label, fontface = ifelse(significant, "bold", "plain")), color = "black", size = 4) +
+  scale_fill_gradient2(midpoint = 0, low = "red", mid = "white", high = "green") +
+  theme(text = element_text(size=20), axis.text.x=element_text(angle=90), axis.text.y=element_text(size=10)) +
+  xlab(NULL)
+
+p5 <- ggplot(oa_data, aes(x=group, y=hypothesis, fill=T)) + 
+  geom_tile(color = "black", lwd = 1.5, linetype = 1) +
+  geom_text(aes(label = T_label, fontface = ifelse(significant, "bold", "plain")), color = "black", size = 4) +
+  scale_fill_gradient2(midpoint = 0, low = "red", mid = "white", high = "green") +
+  theme(text = element_text(size=20), axis.text.x=element_text(angle=90), axis.text.y=element_text(size=10)) +
+  ylab(NULL) + 
+  xlab(NULL)
+
+p6 <- ggplot(pd_data, aes(x=group, y=hypothesis, fill=T)) + 
+  geom_tile(color = "black", lwd = 1.5, linetype = 1) +
+  geom_text(aes(label = T_label, fontface = ifelse(significant, "bold", "plain")), color = "black", size = 4) +
+  scale_fill_gradient2(midpoint = 0, low = "red", mid = "white", high = "green") +
+  theme(text = element_text(size=20), axis.text.x=element_text(angle=90), axis.text.y=element_text(size=10)) +
+  ylab(NULL) + 
+  xlab(NULL)
+
+p4 + p5 + p6
+p_all <- p4 + p5 + p6
+save_plot("ggplot_hypotheses_all.svg", fig = p_all, width=35, height=16)
+
+```
+
+

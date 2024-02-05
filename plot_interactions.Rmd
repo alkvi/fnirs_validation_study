@@ -1,0 +1,96 @@
+---
+title: "plot_interactions"
+output: html_document
+date: "2024-01-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width=16, fig.height=8) 
+
+# load library
+library(lme4)
+library(jtools)
+library(ggplot2)
+library(patchwork)
+library(cowplot)
+
+
+```
+
+## Interactions
+
+Plot 1st level ROI betas to gait variables
+
+```{r, echo=FALSE}
+
+ROIs <- c("BA9+46")
+selected_ROI_idx <- 1
+selected_ROI <- ROIs[selected_ROI_idx]
+
+csv_path <- paste("../Data/temp_data/subject_level_ROI_beta_cbsi_", selected_ROI, "_ALL.csv", sep="")
+my_data = read.csv(csv_path)
+
+# The column "Contrast" is the walking condition, rename it
+colnames(my_data)[colnames(my_data) == "Contrast"] <- "Condition"
+
+# Filter NaN
+nan_rows <- which(is.na(my_data$st_walk_speed))
+cat("Rows with NaN values in gait vars:", nan_rows, "\n")
+my_data <- my_data[complete.cases(my_data$st_walk_speed), ]
+
+# Handle factors
+my_data[my_data=="Stand_still_and_Aud_Stroop"] <- "C1_ST_stand"
+my_data[my_data=="Straight_walking"] <- "C2_ST_walk"
+my_data[my_data=="Straight_walking_and_Aud_Stroop"] <- "C3_DT_walk"
+
+# Factor code some variables
+my_data$Condition <- as.factor(my_data$Condition)
+
+# Show data
+str(my_data)
+
+# Split into groups, and only take ST_walk condition
+data_by_cond <- split(my_data, my_data$Condition)
+data_st_walk <- data_by_cond$C2_ST_walk
+grouped_dataframes <- split(data_st_walk, data_st_walk$group)
+data_YA <- grouped_dataframes$YA
+data_OA <- grouped_dataframes$OA
+data_PD <- grouped_dataframes$PD
+
+plot1 <- ggplot(data_OA, aes(x = st_walk_speed, y = Beta)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "blue") +
+  labs(x = "Walking speed (m/s)", y = "Beta", title = "OA") +
+  theme(text = element_text(size=20), axis.text.y=element_text(size=20),
+        plot.title = element_text(hjust = .5))
+
+plot2 <- ggplot(data_PD, aes(x = st_walk_speed, y = Beta)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "blue") +
+  labs(x = "Walking speed (m/s)", y = "Beta", title = "PD") +
+  theme(text = element_text(size=20), axis.text.y=element_text(size=20),
+        plot.title = element_text(hjust = .5))
+
+plot3 <- ggplot(data_OA, aes(x = st_step_time_var, y = Beta)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "blue") +
+  labs(x = "Step Time Variability (s)", y = "Beta", title = "OA") +
+  theme(text = element_text(size=20), axis.text.y=element_text(size=20),
+        plot.title = element_text(hjust = .5))
+
+plot4 <- ggplot(data_PD, aes(x = st_step_time_var, y = Beta)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "blue") +
+  labs(x = "Step Time Variability (s)", y = "Beta", title = "PD") +
+  theme(text = element_text(size=20), axis.text.y=element_text(size=20), 
+        plot.title = element_text(hjust = .5))
+
+# Combine the plots into a tiled layout
+tiled_layout <- plot1 + plot2 + plot3 + plot4 + 
+  plot_annotation(title = "Relationship between dlPFC activity and gait variables", theme = theme(plot.title = element_text(size = 30, hjust = .5)))
+
+tiled_layout
+
+```
+
