@@ -31,7 +31,7 @@ python prepare_gait_params_for_mixed_model.py
 
 ### Signal quality
 
-To run the quality scripts, run them from the Signal quality directory
+To run the quality scripts, run them from the signal quality directory
 ~~~
 cd Signal_quality
 ~~~

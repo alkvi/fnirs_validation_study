@@ -61,33 +61,41 @@ data_PD <- grouped_dataframes$PD
 plot1 <- ggplot(data_OA, aes(x = st_walk_speed, y = Beta)) +
   geom_point() +
   geom_smooth(method = "lm", se = TRUE, color = "blue") +
+  coord_cartesian(xlim = c(0.4, 1.6), ylim=c(-2.5,5)) +
   labs(x = "Walking speed (m/s)", y = "Beta", title = "OA") +
+  theme_light() +
   theme(text = element_text(size=20), axis.text.y=element_text(size=20),
         plot.title = element_text(hjust = .5))
 
 plot2 <- ggplot(data_PD, aes(x = st_walk_speed, y = Beta)) +
   geom_point() +
   geom_smooth(method = "lm", se = TRUE, color = "blue") +
+  coord_cartesian(xlim = c(0.4, 1.6), ylim=c(-2.5,5)) +
   labs(x = "Walking speed (m/s)", y = "Beta", title = "PD") +
+  theme_light() +
   theme(text = element_text(size=20), axis.text.y=element_text(size=20),
         plot.title = element_text(hjust = .5))
 
 plot3 <- ggplot(data_OA, aes(x = st_step_time_var, y = Beta)) +
   geom_point() +
   geom_smooth(method = "lm", se = TRUE, color = "blue") +
+  coord_cartesian(xlim = c(0, 0.37), ylim=c(-2.5,5)) +
   labs(x = "Step Time Variability (s)", y = "Beta", title = "OA") +
+  theme_light() +
   theme(text = element_text(size=20), axis.text.y=element_text(size=20),
         plot.title = element_text(hjust = .5))
 
 plot4 <- ggplot(data_PD, aes(x = st_step_time_var, y = Beta)) +
   geom_point() +
   geom_smooth(method = "lm", se = TRUE, color = "blue") +
+  coord_cartesian(xlim = c(0, 0.37), ylim=c(-2.5,5)) +
   labs(x = "Step Time Variability (s)", y = "Beta", title = "PD") +
+  theme_light() +
   theme(text = element_text(size=20), axis.text.y=element_text(size=20), 
-        plot.title = element_text(hjust = .5))
+        plot.title = element_text(hjust = .5)) 
 
 # Combine the plots into a tiled layout
-tiled_layout <- plot1 + plot2 + plot3 + plot4 + 
+tiled_layout <- plot1 + plot3 + plot2 + plot4 + 
   plot_annotation(title = "Relationship between dlPFC activity and gait variables", theme = theme(plot.title = element_text(size = 30, hjust = .5)))
 
 tiled_layout
