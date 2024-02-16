@@ -3,8 +3,10 @@ etc
 .Rhistory
 summarize_results.html
 plot_interactions.html
-Signal_quality/Figures
+Signal_quality/Figures/*
 Signal_quality/*.pickle
 Signal_quality/*.txt
 Signal_quality/*.json
 *.svg
+*.pickle
+*.json

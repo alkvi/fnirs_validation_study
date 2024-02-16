@@ -4,7 +4,7 @@
 %% Load
 
 % Load BIDS
-my_data_dir = '../../Data/bids_dataset_snirf';
+my_data_dir = '../../Data/fNIRS_data/bids_dataset_snirf';
 raw_data = nirs.bids.loadBIDS(my_data_dir, true);
 
 % Also save the data to file

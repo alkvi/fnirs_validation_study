@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
     pd.set_option('display.max_rows', None)
 
-    param_file = "../Data/imu_gait_parameters.csv"
+    param_file = "../Data/IMU_data/imu_gait_parameters.csv"
     gait_param_data = pd.read_csv(param_file)
 
     ya_ids = pd.read_csv("../Data/identifiers_YA.csv")['id_nummer'].to_list()
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     for id in pd_ids:
         gait_data_p1.loc[gait_data_p1.subject == id, 'group'] = "PD"
 
-    param_file = "../Data/imu_variability_parameters.csv"
+    param_file = "../Data/IMU_data/imu_variability_parameters.csv"
     variability_param_data = pd.read_csv(param_file)
     variability_param_data_p1 = variability_param_data[(variability_param_data['session'] == 'protocol1')]
 
@@ -138,5 +138,5 @@ if __name__ == "__main__":
     box_plot.xaxis.grid(True) 
     plt.show()
 
-    avg_frame.to_csv("../Data/validation_data_imu_gait_parameters.csv", index=False)
+    avg_frame.to_csv("../Data/temp_data/validation_data_imu_gait_parameters.csv", index=False)
     

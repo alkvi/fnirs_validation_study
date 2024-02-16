@@ -138,7 +138,7 @@ if __name__ == "__main__":
             # Plot overall SCI
             fig_folder = "Figures"
             fig_name = f"SCI_overall_{bids_path.basename}.png"
-            plot_bar(raw_intensity, overall_sci_long, short_idx, fig_folder, fig_name)
+            #plot_bar(raw_intensity, overall_sci_long, short_idx, fig_folder, fig_name)
             
 # Save pickles     
 with open('all_sci_per_condition.pickle', 'wb') as handle:
