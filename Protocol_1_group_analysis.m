@@ -1,8 +1,16 @@
 %% Select dataset
 
 clear;
-load('../Data/mat_files/SubjStats_setup_1_cbsi_vardpf.mat');
-SubjStats = SubjStats_cbsi;
+
+% One of cbsi, hbo, hbr, hbd, hbt
+hemo_measure = "hbt";
+
+% File locations
+subjstats_file = "../Data/mat_files/SubjStats_setup_1_" + hemo_measure + "_vardpf.mat";
+results_file = "../Data/temp_data/hypothesis_table_" + hemo_measure + ".csv";
+
+% Load
+SubjStats = importdata(subjstats_file);
 
 %% Set groups in demographics
 
@@ -444,7 +452,7 @@ disp(hypothesis_table);
 
 %% Write table 
 
-writetable(hypothesis_table,'../Data/temp_data/hypothesis_table_cbsi.csv')  
+writetable(hypothesis_table, results_file)  
 
 %% Draw
 

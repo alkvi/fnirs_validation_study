@@ -1,4 +1,4 @@
-%% Load SNIRF pipeline processed data
+%% Load processed data
 
 load('../Data/mat_files/SubjStats_setup_1_cbsi_vardpf.mat');
 SubjStats = SubjStats_cbsi;
@@ -156,7 +156,7 @@ for i=1:length(ROIs)
         roi_result_all.st_walk_speed(idx,:) = SubjStats(subj_idx).demographics.st_walk_speed;
         roi_result_all.st_step_time_var(idx,:) = SubjStats(subj_idx).demographics.st_step_time_var;
     end
-    fname = 'subject_level_ROI_beta_cbsi_' + ROI_names(i) + '_ALL.csv';
+    fname = '../Data/temp_data/subject_level_ROI_beta_cbsi_' + ROI_names(i) + '_ALL.csv';
     writetable(roi_result_all, fname);
     
 end

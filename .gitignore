@@ -10,3 +10,4 @@ Signal_quality/*.json
 *.svg
 *.pickle
 *.json
+*.png
