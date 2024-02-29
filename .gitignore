@@ -11,3 +11,4 @@ Signal_quality/*.json
 *.pickle
 *.json
 *.png
+*.html

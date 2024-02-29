@@ -1,0 +1,146 @@
+---
+title: "check_correlations"
+output: html_document
+date: "2024-01-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width=16, fig.height=8) 
+
+# load library
+library(lme4)
+library(jtools)
+library(ggplot2)
+library(patchwork)
+library(cowplot)
+library("ggpubr")
+
+
+```
+
+## Interactions
+
+Plot 1st level ROI betas to gait variables
+
+```{r, echo=FALSE}
+
+ROIs <- c("BA9+46")
+selected_ROI_idx <- 1
+selected_ROI <- ROIs[selected_ROI_idx]
+
+csv_path <- paste("../Data/temp_data/subject_level_ROI_beta_cbsi_", selected_ROI, "_ALL.csv", sep="")
+my_data = read.csv(csv_path)
+
+# The column "Contrast" is the walking condition, rename it
+colnames(my_data)[colnames(my_data) == "Contrast"] <- "Condition"
+
+# Handle factors
+my_data[my_data=="Stand_still_and_Aud_Stroop"] <- "C1_ST_stand"
+my_data[my_data=="Straight_walking"] <- "C2_ST_walk"
+my_data[my_data=="Straight_walking_and_Aud_Stroop"] <- "C3_DT_walk"
+
+# Factor code some variables
+my_data$Condition <- as.factor(my_data$Condition)
+
+# Check normality / skewed distribution
+shapiro.test(my_data$st_walk_speed) 
+shapiro.test(my_data$st_step_time_var) 
+ggqqplot(my_data$st_walk_speed, ylab = "Walking speed")
+ggqqplot(my_data$st_step_time_var, ylab = "Step time variability")
+
+# Show data
+str(my_data)
+
+# Split into groups, and only take ST_walk condition
+data_by_cond <- split(my_data, my_data$Condition)
+data_st_walk <- data_by_cond$C2_ST_walk
+grouped_dataframes <- split(data_st_walk, data_st_walk$group)
+data_YA <- grouped_dataframes$YA
+data_OA <- grouped_dataframes$OA
+data_PD <- grouped_dataframes$PD
+
+# cor.test(x, y, method=c("pearson", "kendall", "spearman"))
+corr_method <- "spearman"
+
+plot1 <- ggscatter(data_OA, x = "balance", y = "Beta",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = corr_method,
+          xlab = "Balance", ylab = "Beta", title="OA")
+
+plot2 <- ggscatter(data_PD, x = "balance", y = "Beta",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = corr_method,
+          xlab = "Balance", ylab = "Beta", title="PD")
+
+plot3 <- ggscatter(data_PD, x = "updrs_3_motor", y = "Beta",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = corr_method,
+          xlab = "UPDRS3", ylab = "Beta", title="PD")
+
+plot4 <- ggscatter(data_OA, x = "w12", y = "Beta",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = corr_method,
+          xlab = "w12", ylab = "Beta", title="OA")
+
+plot5 <- ggscatter(data_PD, x = "w12", y = "Beta",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = corr_method,
+          xlab = "w12", ylab = "Beta", title="PD")
+
+plot6 <- ggscatter(data_YA, x = "st_step_time_var", y = "Beta",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = corr_method,
+          xlab = "Step time var", ylab = "Beta", title="YA")
+
+plot7 <- ggscatter(data_OA, x = "st_step_time_var", y = "Beta",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = corr_method,
+          xlab = "Step time var", ylab = "Beta", title="OA")
+
+plot8 <- ggscatter(data_PD, x = "st_step_time_var", y = "Beta",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = corr_method,
+          xlab = "Step time var", ylab = "Beta", title="PD")
+
+plot9 <- ggscatter(data_YA, x = "st_walk_speed", y = "Beta",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = corr_method,
+          xlab = "Walking speed", ylab = "Beta", title="YA")
+
+plot10 <- ggscatter(data_OA, x = "st_walk_speed", y = "Beta",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = corr_method,
+          xlab = "Walking speed", ylab = "Beta", title="OA")
+
+plot11 <- ggscatter(data_PD, x = "st_walk_speed", y = "Beta",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = corr_method,
+          xlab = "Walking speed", ylab = "Beta", title="PD")
+
+plot12 <- ggscatter(data_YA, x = "dt_cost_walk_speed", y = "Beta",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = corr_method,
+          xlab = "dt_cost_walk_speed", ylab = "Beta", title="YA")
+
+plot13 <- ggscatter(data_OA, x = "dt_cost_walk_speed", y = "Beta",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = corr_method,
+          xlab = "dt_cost_walk_speed", ylab = "Beta", title="OA")
+
+plot14 <- ggscatter(data_PD, x = "dt_cost_walk_speed", y = "Beta",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = corr_method,
+          xlab = "dt_cost_walk_speed", ylab = "Beta", title="PD")
+
+
+# Combine the plots into a tiled layout
+tiled_layout <- plot1 + plot2 + plot3  + plot4 + plot5 + plot6 + plot7 + 
+  plot8 + plot9 + plot10  + plot11 + plot12 + plot13 + plot14 +
+  plot_annotation(title = "Relationship between dlPFC activity and all variables", theme = theme(plot.title = element_text(size = 30, hjust = .5)))
+
+tiled_layout
+
+
+```
+
