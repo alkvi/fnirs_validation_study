@@ -155,6 +155,11 @@ for i=1:length(ROIs)
         roi_result_all.group(idx,:) = SubjStats(subj_idx).demographics.group;
         roi_result_all.st_walk_speed(idx,:) = SubjStats(subj_idx).demographics.st_walk_speed;
         roi_result_all.st_step_time_var(idx,:) = SubjStats(subj_idx).demographics.st_step_time_var;
+       
+        roi_result_all.dt_cost_walk_speed(idx,:) = SubjStats(subj_idx).demographics.dt_cost_walk_speed;
+        roi_result_all.w12(idx,:) = SubjStats(subj_idx).demographics.w12;
+        roi_result_all.balance(idx,:) = SubjStats(subj_idx).demographics.balance;
+        roi_result_all.updrs_3_motor(idx,:) = SubjStats(subj_idx).demographics.updrs_3_motor;
     end
     fname = '../Data/temp_data/subject_level_ROI_beta_cbsi_' + ROI_names(i) + '_ALL.csv';
     writetable(roi_result_all, fname);
