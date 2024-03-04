@@ -3,7 +3,7 @@
 clear;
 
 % One of cbsi, hbo, hbr, hbd, hbt
-hemo_measure = "hbt";
+hemo_measure = "cbsi";
 
 % File locations
 subjstats_file = "../Data/mat_files/SubjStats_setup_1_" + hemo_measure + "_vardpf.mat";
