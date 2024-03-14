@@ -143,20 +143,20 @@ hypothesis_data <- hypothesis_data_cbsi
 hypothesis_data$hypothesis <- c("H1", "H1", "H2", "H3", "H3", "H3", "H5", "H5", "H6", "H7", "H7", "H8", "H8", "H9", "H9", "H10", "H10", "H10", "H11")
 
 # Change group name
-hypothesis_data$group <- paste("cbsi_", hypothesis_data$group, sep="")
+hypothesis_data$group <- paste("CBSI ", hypothesis_data$group, sep="")
 
 # Here also read HbO, HHb, other data.
 # HbO
 csv_path <- "../Data/temp_data/hypothesis_table_hbo.csv"
 hypothesis_data_hbo <- read.csv(csv_path)
-hypothesis_data_hbo$group <- paste("hbo_", hypothesis_data_hbo$group, sep="")
+hypothesis_data_hbo$group <- paste("hbo ", hypothesis_data_hbo$group, sep="")
 hypothesis_data_hbo$hypothesis <- c("H1", "H1", "H2", "H3", "H3", "H3", "H5", "H5", "H6", "H7", "H7", "H8", "H8", "H9", "H9", "H10", "H10", "H10", "H11")
 hypothesis_data <- rbind(hypothesis_data_hbo, hypothesis_data)
 
 # HbR
 csv_path <- "../Data/temp_data/hypothesis_table_hbr.csv"
 hypothesis_data_hbr <- read.csv(csv_path)
-hypothesis_data_hbr$group <- paste("hbr_", hypothesis_data_hbr$group, sep="")
+hypothesis_data_hbr$group <- paste("hbr ", hypothesis_data_hbr$group, sep="")
 hypothesis_data_hbr$hypothesis <- c("H1", "H1", "H2", "H3", "H3", "H3", "H5", "H5", "H6", "H7", "H7", "H8", "H8", "H9", "H9", "H10", "H10", "H10", "H11")
 
 # Flip the T values for HbR since it should decrease where we expect others to increase
@@ -166,14 +166,14 @@ hypothesis_data <- rbind(hypothesis_data_hbr, hypothesis_data)
 # HbT
 csv_path <- "../Data/temp_data/hypothesis_table_hbt.csv"
 hypothesis_data_hbt <- read.csv(csv_path)
-hypothesis_data_hbt$group <- paste("hbt_", hypothesis_data_hbt$group, sep="")
+hypothesis_data_hbt$group <- paste("hbt ", hypothesis_data_hbt$group, sep="")
 hypothesis_data_hbt$hypothesis <- c("H1", "H1", "H2", "H3", "H3", "H3", "H5", "H5", "H6", "H7", "H7", "H8", "H8", "H9", "H9", "H10", "H10", "H10", "H11")
 hypothesis_data <- rbind(hypothesis_data_hbt, hypothesis_data)
 
 # HbD
 csv_path <- "../Data/temp_data/hypothesis_table_hbd.csv"
 hypothesis_data_hbd <- read.csv(csv_path)
-hypothesis_data_hbd$group <- paste("hbd_", hypothesis_data_hbd$group, sep="")
+hypothesis_data_hbd$group <- paste("hbd ", hypothesis_data_hbd$group, sep="")
 hypothesis_data_hbd$hypothesis <- c("H1", "H1", "H2", "H3", "H3", "H3", "H5", "H5", "H6", "H7", "H7", "H8", "H8", "H9", "H9", "H10", "H10", "H10", "H11")
 hypothesis_data <- rbind(hypothesis_data_hbd, hypothesis_data)
 
@@ -203,11 +203,11 @@ hypothesis_data$hypothesis <- as.factor(hypothesis_data$hypothesis)
 hypothesis_data$hypothesis <- factor(hypothesis_data$hypothesis, levels=c('H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7', 'H8', 'H9', 'H10', 'H11'))
 hypothesis_data$group <- as.factor(hypothesis_data$group)
 hypothesis_data$group <- factor(hypothesis_data$group, levels=c('EX', 
-                                                                'cbsi_YA', 'cbsi_OA', 'cbsi_PD',
-                                                                'hbo_YA', 'hbo_OA', 'hbo_PD',
-                                                                'hbr_YA', 'hbr_OA', 'hbr_PD',
-                                                                'hbt_YA', 'hbt_OA', 'hbt_PD',
-                                                                'hbd_YA', 'hbd_OA', 'hbd_PD'))
+                                                                'CBSI YA', 'CBSI OA', 'CBSI PD',
+                                                                'hbo YA', 'hbo OA', 'hbo PD',
+                                                                'hbr YA', 'hbr OA', 'hbr PD',
+                                                                'hbt YA', 'hbt OA', 'hbt PD',
+                                                                'hbd YA', 'hbd OA', 'hbd PD'))
 
 # Order by hypothesis and group
 hypothesis_data <- hypothesis_data[order(hypothesis_data$hypothesis, hypothesis_data$group),]
@@ -269,9 +269,18 @@ pd_data <- hypothesis_data[hypothesis_data$hypothesis %in% hypos &
                               str_detect(hypothesis_data$group, 'EX')),]
 
 # Separate out also the main measurement, CBSI
-ya_data_cbsi = ya_data[ya_data$group %in% c("EX", "cbsi_YA"),]
-oa_data_cbsi = oa_data[oa_data$group %in% c("EX", "cbsi_OA"),]
-pd_data_cbsi = pd_data[pd_data$group %in% c("EX", "cbsi_PD"),]
+ya_data_cbsi = ya_data[ya_data$group %in% c("EX", "CBSI YA"),]
+oa_data_cbsi = oa_data[oa_data$group %in% c("EX", "CBSI OA"),]
+pd_data_cbsi = pd_data[pd_data$group %in% c("EX", "CBSI PD"),]
+
+
+# Rename EX factor
+levels(ya_data$group) <- revalue(levels(ya_data$group), c("EX"="Expected"))
+levels(oa_data$group) <- revalue(levels(oa_data$group), c("EX"="Expected"))
+levels(pd_data$group) <- revalue(levels(pd_data$group), c("EX"="Expected"))
+levels(ya_data_cbsi$group) <- revalue(levels(ya_data_cbsi$group), c("EX"="Expected"))
+levels(oa_data_cbsi$group) <- revalue(levels(oa_data_cbsi$group), c("EX"="Expected"))
+levels(pd_data_cbsi$group) <- revalue(levels(pd_data_cbsi$group), c("EX"="Expected"))
 
 
 ```
