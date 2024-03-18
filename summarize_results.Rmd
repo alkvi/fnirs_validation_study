@@ -366,7 +366,7 @@ p6 <- ggplot(pd_data, aes(x=group, y=hypothesis, fill=T)) +
 
 p4 + p5 + p6
 p_all <- p4 + p5 + p6
-save_plot("ggplot_hypotheses_all.svg", fig = p_all, width=35, height=16)
+save_plot("ggplot_hypotheses_all.svg", fig = p_all, width=40, height=16)
 
 ```
 

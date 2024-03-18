@@ -15,7 +15,7 @@ library(ggplot2)
 library(patchwork)
 library(cowplot)
 library(ggpubr)
-
+library(sjPlot)
 
 ```
 
@@ -104,6 +104,8 @@ tiled_layout <- plot1 + plot3 + plot2 + plot4 +
   plot_annotation(title = "Relationship between dlPFC activity and gait variables", theme = theme(plot.title = element_text(size = 30, hjust = .5)))
 
 tiled_layout
+
+save_plot("dlpfc_to_gait.svg", fig = tiled_layout, width=25, height=18)
 
 ```
 
