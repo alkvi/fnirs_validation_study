@@ -1,0 +1,347 @@
+---
+title: "compare_demographics"
+format: html
+editor: visual
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width=10, fig.height=5) 
+
+# load library
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(rstatix)
+library(gt)
+library(gtExtras)
+library(ggstatsplot)
+
+```
+
+
+```{r, echo=FALSE}
+
+# Load and prepare all data
+
+### Identifiers
+csv_path <- paste("../Data/identifiers_YA.csv", sep="")
+identifiers_ya <- read.csv(csv_path)
+csv_path <- paste("../Data/identifiers_OA.csv", sep="")
+identifiers_oa <- read.csv(csv_path)
+csv_path <- paste("../Data/identifiers_PD.csv", sep="")
+identifiers_pd <- read.csv(csv_path)
+
+# Assign group function
+assign_group <- function(df, identifiers_ya, identifiers_oa, identifiers_pd){
+  df$group <- case_when(
+    df$subject %in% identifiers_ya$id_nummer ~ "YA",
+    df$subject %in% identifiers_oa$id_nummer ~ "OA",
+    df$subject %in% identifiers_pd$id_nummer ~ "PD",
+    TRUE ~ NA_character_
+  )
+  df$group <- factor(df$group, levels=c('YA', 'OA', 'PD'))
+  return(df)
+}
+
+### Demographic data / CRF data
+csv_path <- paste("../Data/basic_demographics.csv", sep="")
+demo_data <- read.csv(csv_path)
+demo_data <- assign_group(demo_data, identifiers_ya, identifiers_oa, identifiers_pd)
+
+csv_path <- paste("../Data/REDcap_data/CRF_data.csv", sep="")
+crf_data <- read.csv(csv_path) 
+names(crf_data)[names(crf_data) == 'id_nummer'] <- 'subject'
+crf_data <- assign_group(crf_data, identifiers_ya, identifiers_oa, identifiers_pd)
+crf_data$group <- factor(crf_data$group, levels=c('YA', 'OA', 'PD'))
+
+# UPDRS
+csv_path <- paste("../Data/REDcap_data/UPDRS_data.csv", sep="")
+updrs_data <- read.csv(csv_path) 
+names(updrs_data)[names(updrs_data) == 'id_nummer'] <- 'subject'
+updrs_data = updrs_data[c("subject", "mdsupdrs3_hy")]
+updrs_data <- assign_group(updrs_data, identifiers_ya, identifiers_oa, identifiers_pd)
+
+### Balance data
+csv_path <- paste("../Data/REDcap_data/MiniBEST_data.csv", sep="")
+balance_data <- read.csv(csv_path)
+names(balance_data)[names(balance_data) == 'id_nummer'] <- 'subject'
+balance_data <- balance_data[c("subject", "mb_total")]
+balance_data <- assign_group(balance_data, identifiers_ya, identifiers_oa, identifiers_pd)
+
+# Balance data is only for OA and PD
+balance_data <- balance_data[!balance_data$group == 'YA', ]
+balance_data$group <- factor(balance_data$group, levels=c('OA', 'PD'))
+
+### Walk-12 data
+csv_path <- paste("../Data/REDcap_data/Walk12_data.csv", sep="")
+w12_data <- read.csv(csv_path)
+names(w12_data)[names(w12_data) == 'id_nummer'] <- 'subject'
+w12_data <- w12_data[c("subject", "g12_sum")]
+w12_data <- assign_group(w12_data, identifiers_ya, identifiers_oa, identifiers_pd)
+
+# W12 data is only for OA and PD
+w12_data <- w12_data[!w12_data$group == 'YA', ]
+w12_data$group <- factor(w12_data$group, levels=c('OA', 'PD'))
+
+```
+
+## Demographics
+
+```{r, echo=FALSE}
+
+crf_demo_data <- merge(demo_data, crf_data, by = "subject", all = TRUE)
+crf_demo_data <- subset(crf_demo_data, select = -c(group.y))
+names(crf_demo_data)[names(crf_demo_data) == 'group.x'] <- 'group'
+
+demo_data_means <- crf_demo_data %>%
+  group_by(group) %>%
+  summarise(no_subjects = n(),
+            mean_age = mean(age, na.rm = TRUE),
+            n_female = sum(sex), 
+            height = mean(height, na.rm = TRUE),
+            weight = mean(weight, na.rm = TRUE),
+            education = mean(crf_utbildning_ar, na.rm = TRUE),
+            .groups='drop')
+
+demo_data_means |> 
+  gt()  |> 
+  tab_header(
+    title = 'demographics - means',
+    subtitle = 'All groups'
+  ) |>  
+  fmt_number(
+    decimals = 1
+  ) 
+
+demo_data_sd <- crf_demo_data %>%
+  group_by(group) %>%
+  summarise(no_subjects = n(),
+            age_sd = sd(age, na.rm = TRUE),
+            height_sd = sd(height, na.rm = TRUE),
+            weight_sd = sd(weight, na.rm = TRUE),
+            education_sd = sd(crf_utbildning_ar, na.rm = TRUE),
+            .groups='drop')
+
+demo_data_sd |> 
+  gt()  |> 
+  tab_header(
+    title = 'demographics - SD',
+    subtitle = 'All groups'
+  ) |>  
+  fmt_number(
+    decimals = 1
+  ) 
+
+# Get HY stage
+updrs_hy_data <- updrs_data[c("subject", "mdsupdrs3_hy", "group")]
+updrs_hy_data_counts <- updrs_hy_data %>%
+  group_by(group) %>%
+  count(mdsupdrs3_hy)
+updrs_hy_data_counts <- updrs_hy_data_counts[updrs_hy_data_counts$group == 'PD', ]
+
+# Code gender
+demo_data$sex[demo_data$sex == 0] <- "Male"
+demo_data$sex[demo_data$sex == 1] <- "Female"
+demo_data$sex <- factor(demo_data$sex, levels=c("Male", "Female"))
+
+# Also mean and SD for the balance data and walk12 data
+balance_w12_data <- merge(balance_data, w12_data, by = "subject", all = TRUE)
+balance_w12_means <- balance_w12_data %>%
+  group_by(group.x) %>%
+  summarise(mean_balance = mean(mb_total, na.rm = TRUE),
+            mean_w12 = mean(g12_sum, na.rm = TRUE))
+balance_w12_sd <- balance_w12_data %>%
+  group_by(group.x) %>%
+  summarise(sd_balance = sd(mb_total, na.rm = TRUE),
+            sd_w12 = sd(g12_sum, na.rm = TRUE))
+balance_w12_min <- balance_w12_data %>%
+  group_by(group.x) %>%
+  summarise(min_balance = min(mb_total, na.rm = TRUE),
+            min_w12 = min(g12_sum, na.rm = TRUE))
+balance_w12_max <- balance_w12_data %>%
+  group_by(group.x) %>%
+  summarise(max_balance = max(mb_total, na.rm = TRUE),
+            max_w12 = max(g12_sum, na.rm = TRUE))
+balance_w12_means |> 
+  gt()  |> 
+  tab_header(
+    title = 'Balance + W12 - Mean',
+    subtitle = 'OA and PD'
+  ) |>  
+  fmt_number(
+    decimals = 1
+  ) 
+balance_w12_sd |> 
+  gt()  |> 
+  tab_header(
+    title = 'Balance + W12 - SD',
+    subtitle = 'OA and PD'
+  ) |>  
+  fmt_number(
+    decimals = 1
+  ) 
+balance_w12_min |> 
+  gt()  |> 
+  tab_header(
+    title = 'Balance + W12 - min',
+    subtitle = 'OA and PD'
+  ) |>  
+  fmt_number(
+    decimals = 1
+  ) 
+balance_w12_max |> 
+  gt()  |> 
+  tab_header(
+    title = 'Balance + W12 - max',
+    subtitle = 'OA and PD'
+  ) |>  
+  fmt_number(
+    decimals = 1
+  ) 
+
+```
+
+HY stages:  
+HY1 - 2  
+HY2 - 21  
+HY3 - 16  
+HY4 - 1  
+
+
+## Comparison table
+
+```{r, echo=FALSE}
+
+# Normality testing
+age_group_norm <- demo_data %>%
+  group_by(group) %>%
+  shapiro_test(age)
+
+height_group_norm <- demo_data %>%
+  group_by(group) %>%
+  shapiro_test(height)
+
+weight_group_norm <- demo_data %>%
+  group_by(group) %>%
+  shapiro_test(weight)
+
+edu_group_norm <- crf_data %>%
+  group_by(group) %>%
+  shapiro_test(crf_utbildning_ar)
+
+balance_group_norm <- balance_data %>%
+  group_by(group) %>%
+  shapiro_test(mb_total)
+
+w12_group_norm <- w12_data %>%
+  group_by(group) %>%
+  shapiro_test(g12_sum)
+
+# Non-normal: age, education (YA), height (PD), weight (PD), balance, walk-12
+# For wilcox_test, with PAIRED=false, the test is the Mann-Whitney test
+
+# Age
+age_group_comp <- demo_data %>%
+  wilcox_test(age ~ group, p.adjust.method = "bonferroni", paired=FALSE, detailed=TRUE)
+age_group_comp$category = "demographics"
+age_group_comp <- age_group_comp[-c(13, 14)]
+age_group_comp$estimate1 = NA
+age_group_comp$estimate2 = NA
+age_group_comp$df = NA
+
+# Education
+edu_group_comp_t <- crf_data %>%
+  t_test(crf_utbildning_ar ~ group, p.adjust.method = "bonferroni", paired=FALSE, detailed=TRUE)
+edu_group_comp_w <- crf_data %>%
+  wilcox_test(crf_utbildning_ar ~ group, p.adjust.method = "bonferroni", paired=FALSE, detailed=TRUE)
+edu_group_comp_w$estimate1 = NA
+edu_group_comp_w$estimate2 = NA
+edu_group_comp_w$df = NA
+edu_group_comp = rbind(edu_group_comp_t[3,], edu_group_comp_w[c(1,2),])
+edu_group_comp$category = "demographics"
+edu_group_comp <- edu_group_comp[-c(16, 17)]
+
+# Height
+height_group_comp_t <- demo_data %>%
+  t_test(height ~ group, p.adjust.method = "bonferroni", paired=FALSE, detailed=TRUE)
+height_group_comp_w <- demo_data %>%
+  wilcox_test(height ~ group, p.adjust.method = "bonferroni", paired=FALSE, detailed=TRUE)
+height_group_comp_w$estimate1 = NA
+height_group_comp_w$estimate2 = NA
+height_group_comp_w$df = NA
+height_group_comp = rbind(height_group_comp_t[1,], height_group_comp_w[c(2,3),])
+height_group_comp$category = "demographics"
+height_group_comp <- height_group_comp[-c(16, 17)]
+
+# Weight
+weight_group_comp_t <- demo_data %>%
+  t_test(weight ~ group, p.adjust.method = "bonferroni", paired=FALSE, detailed=TRUE)
+weight_group_comp_w <- demo_data %>%
+  wilcox_test(weight ~ group, p.adjust.method = "bonferroni", paired=FALSE, detailed=TRUE)
+weight_group_comp_w$estimate1 = NA
+weight_group_comp_w$estimate2 = NA
+weight_group_comp_w$df = NA
+weight_group_comp = rbind(weight_group_comp_t[1,], weight_group_comp_w[c(2,3),])
+weight_group_comp$category = "demographics"
+weight_group_comp <- weight_group_comp[-c(16, 17)]
+
+# Balance
+balance_group_comp <- balance_data %>%
+  wilcox_test(mb_total ~ group, p.adjust.method = "bonferroni", paired=FALSE, detailed=TRUE)
+balance_group_comp$category = "clinical tests"
+balance_group_comp$estimate1 = NA
+balance_group_comp$estimate2 = NA
+balance_group_comp$df = NA
+
+# Walk-12
+w12_group_comp <- w12_data %>%
+  wilcox_test(g12_sum ~ group, p.adjust.method = "bonferroni", paired=FALSE, detailed=TRUE)
+w12_group_comp$category = "questionnaires"
+w12_group_comp$estimate1 = NA
+w12_group_comp$estimate2 = NA
+w12_group_comp$df = NA
+
+# Gender
+contingency_table <- table(demo_data$sex, demo_data$group)
+gender_group_comp <- pairwise_prop_test(contingency_table)
+gender_group_comp <- gender_group_comp[-c(4, 5)]
+gender_group_comp$.y. = "gender"
+gender_group_comp$estimate1 = NA
+gender_group_comp$estimate2 = NA
+gender_group_comp$n1 = NA
+gender_group_comp$n2 = NA
+gender_group_comp$statistic = NA
+gender_group_comp$df = NA
+gender_group_comp$method = "chi-square"
+gender_group_comp$category = "demographics"
+
+# Combine tables for display
+stats_table = rbind(age_group_comp, edu_group_comp, 
+                    balance_group_comp, w12_group_comp, height_group_comp, weight_group_comp) 
+stats_table = stats_table[c(".y.", "group1", "group2", "estimate1", "estimate2",
+                            "n1", "n2", "statistic", "p", "df", "method", "category")]
+stats_table = rbind(stats_table, gender_group_comp) 
+stats_table <- rename(stats_table, mean1 = estimate1, mean2 = estimate2, measure = .y.)
+
+stats_table |> 
+  group_by(category) |>
+  gt()  |> 
+  tab_header(
+    title = 'stats table',
+    subtitle = 'Groups compared'
+  ) |> 
+  fmt_number(
+    columns = c("statistic", "df", "p", "mean1", "mean2"),
+    decimals = 2
+  ) |>
+  tab_style(
+    style = list(cell_text(weight = "bold")),
+    locations = cells_body(
+      columns = p,
+      rows = p < 0.05
+    )
+  )
+
+```
+
