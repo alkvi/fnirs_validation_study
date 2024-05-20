@@ -311,27 +311,35 @@ disp(roi_result_hy);
 
 models_table = table();
 
-job = nirs.modules.MixedEffects();
-ya_formula = "beta ~ -1 + cond + hads_anxiety + cond:dt_cost_walk_speed + (1|SubjectID)"; 
-job.formula = convertStringsToChars(ya_formula);
-job.dummyCoding = 'full';
-job.include_diagnostics = true;
-GroupStats = job.run(SubjStats_ya);
-roi_result_ya = nirs.util.roiAverage(GroupStats, ROI_ba_9_46, 'BA9_46');
+model_formulas = ["beta ~ -1 + cond + cond:dt_cost_walk_speed + (1|SubjectID)",
+    "beta ~ -1 + cond + hads_anxiety + (1|SubjectID)"];
 
-disp('YA')
-disp(roi_result_ya);
-disp(roi_result_ya.model{1}.ModelCriterion.AIC);
-disp(roi_result_ya.model{1}.ModelCriterion.BIC);
+model_covariates = ["Straight_walking_and_Aud_Stroop_dt_cost_walk_speed", 
+    "anxiety"];
 
-[AIC, BIC] = PlotDiagnostics(roi_result_ya.model{1}, "YA model", "Straight_walking_and_Aud_Stroop_dt_cost_walk_speed");
+for idx=1:length(model_formulas)
+    
+    formula = convertStringsToChars(model_formulas(idx));
+    covar = model_covariates(idx);
 
-roi_result_ya.formula = repmat(ya_formula, size(roi_result_ya,1),1);
-roi_result_ya.AIC = repmat(AIC, size(roi_result_ya,1),1);
-roi_result_ya.BIC = repmat(AIC, size(roi_result_ya,1),1);
-roi_result_ya.group = repmat("YA", size(roi_result_ya,1),1);
+    job = nirs.modules.MixedEffects();
+    job.dummyCoding = 'full';
+    job.include_diagnostics = true;
+    job.formula = formula;
+    GroupStats = job.run(SubjStats_ya);
+    roi_result_group = nirs.util.roiAverage(GroupStats, ROI_ba_9_46, 'BA9_46');
 
-models_table = [models_table; roi_result_ya];
+    [AIC, BIC] = PlotDiagnostics(roi_result_group.model{1}, "YA_model_" + covar , covar);
+    
+    roi_result_group.formula = repmat(model_formulas(idx), size(roi_result_group,1),1);
+    roi_result_group.AIC = repmat(AIC, size(roi_result_group,1),1);
+    roi_result_group.BIC = repmat(AIC, size(roi_result_group,1),1);
+    roi_result_group.group = repmat("YA", size(roi_result_group,1),1);
+    
+    % Add to table
+    models_table = [models_table; roi_result_group];
+   
+end
 
 %% Interactions - OA
 
