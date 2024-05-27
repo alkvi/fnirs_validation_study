@@ -253,10 +253,7 @@ All variables have non-normal distributions in at least one group
 
 ```{r, echo=FALSE, results='asis'}
 
-mycontrols  <- tableby.control(numeric.test="kwt", cat.test="chisq",
-                               numeric.stats=c("N", "median"),
-                               cat.stats=c("countpct"),
-                               stats.labels=list(N='Count', median='Median'))
+mycontrols  <- tableby.control(numeric.test="kwt", cat.test="chisq")
 
 # Where we have 3 groups
 tab1 <- tableby(group ~ sex + age + crf_utbildning_ar + weight + height, data=all_comparison_data, control=mycontrols)
