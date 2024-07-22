@@ -1,6 +1,6 @@
 # fNIRS validation study
 
-This repository contains files for producing the results found in: (to be added)
+This repository contains files for producing the results found in: https://doi.org/10.1016/j.nicl.2024.103637
 
 The data repository for this study can be found in: https://doi.org/10.48723/vscr-eq07. Details on how this dataset was prepared can be found in: https://github.com/alkvi/fnirs_dataset_preparation.
 
